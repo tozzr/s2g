@@ -30,6 +30,7 @@ public class StaticSiteGeneratorTest {
 	@Before
 	public void setUp() throws Exception {
 		files = new ArrayList<File>();
+		createFile("./foo.md", "# this is a test");
 	}
 	
 	@After
@@ -47,7 +48,6 @@ public class StaticSiteGeneratorTest {
 
 	@Test
 	public void createDirectory() throws Exception {
-		createFile("./foo.md", "# this is a test");
 		StaticSiteGenerator g = new StaticSiteGenerator();
 		assertFalse(new File("./foo").isDirectory());
 		g.generate();
@@ -56,7 +56,6 @@ public class StaticSiteGeneratorTest {
 	
 	@Test
 	public void createIndexFile() throws Exception {
-		createFile("./foo.md", "# this is a test");
 		StaticSiteGenerator g = new StaticSiteGenerator();
 		assertFalse(new File("./foo/index.html").isFile());
 		g.generate();
@@ -66,7 +65,6 @@ public class StaticSiteGeneratorTest {
 	@Test
 	public void indexFileShouldHaveContentOfMarkdownFile() throws Exception {
 		createFile("./index.html.template", "<body>{content}</body>");
-		createFile("./foo.md", "# this is a test");
 		StaticSiteGenerator g = new StaticSiteGenerator();
 		g.generate();
 		String content = FileUtils.readFileToString(new File("./foo/index.html"));
@@ -76,7 +74,6 @@ public class StaticSiteGeneratorTest {
 	@Test
 	public void fileShouldBeLinkedOnHomePage() throws Exception {
 		createFile("./index.html.template", "<body>{links}{content}</body>");
-		createFile("./foo.md", "# this is a test");
 		StaticSiteGenerator g = new StaticSiteGenerator();
 		g.generate();
 		String content = FileUtils.readFileToString(new File("./index.html"));
