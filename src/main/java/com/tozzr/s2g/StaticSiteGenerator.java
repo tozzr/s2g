@@ -1,8 +1,8 @@
 package com.tozzr.s2g;
 
 import java.io.File;
-import java.io.FilenameFilter;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -14,26 +14,28 @@ class StaticSiteGenerator {
 		new StaticSiteGenerator(".").generate();
 	}
 	
-	private FilenameFilter markdownFileFilter;
 	private List<Article> articles;
 	private final String baseDir;
+	private final Path basePath;
 	
 	public StaticSiteGenerator(String baseDir) {
 		this.baseDir = baseDir;
-		markdownFileFilter = new FilenameFilter() {				
-			public boolean accept(File dir, String name) {
-				return name.endsWith(".md");
-			}
-		};
+		basePath = new File(baseDir).toPath();
 		articles = new ArrayList<Article>();
 	}
 
 	public void generate() throws IOException {
-		File dir = new File(baseDir);
-		for (File f : dir.listFiles(markdownFileFilter))
-			generateArticle(f);
+		generateArticles(new File(baseDir));
 		updateHomePage();
 		updatePageLinks();
+	}
+
+	public void generateArticles(File dir) throws IOException {
+		for (File f : dir.listFiles())
+			if (f.isDirectory())
+				generateArticles(f);
+			else if (f.getName().endsWith(".md"))
+				generateArticle(f);
 	}
 
 	private void generateArticle(File f) throws IOException {
@@ -43,7 +45,8 @@ class StaticSiteGenerator {
 	}
 
 	private void createHtmlDocument(Article a) throws IOException {
-		File file = new File(baseDir + "/" + a.getName() + ".html");
+		String p = a.getPath().toString().replace(".md", ".html");
+		File file = new File(p);
 		FileUtils.write(file, mergeContentIntoTemplate(a));
 	}
 
@@ -59,7 +62,12 @@ class StaticSiteGenerator {
 		String content = "";
 		for (Article a : articles) {
 			content = mergeContentIntoTemplate(a);
-			links += "<li><a href=\"." + "/" + a.getName() + ".html\">" + a.getTitle() + "</a></li>\n";
+			String path = "./";
+			int ac = a.getPath().getNameCount();
+			int bc = basePath.getNameCount();
+			for (int i = 0; i < ac - bc - 1; i++)
+				path += a.getPath().getName(ac-2-i) + "/";
+			links += "<li><a href=\"" + path + a.getName() + ".html\">" + a.getTitle() + "</a></li>\n";
 		}
 		content = content.replace("{links}", links);
 		content = content.replaceAll("\\{path\\}", "");
@@ -72,12 +80,32 @@ class StaticSiteGenerator {
 	}
 
 	public void updateSinglePageLinks(Article article) throws IOException {
-		String content = FileUtils.readFileToString(new File(baseDir + "/" + article.getName() + ".html"));
+		String content = FileUtils.readFileToString(new File(article.getPath().toString().replace(".md", ".html")));
+		content = content.replace("{links}", getLinks(article));
+		content = content.replaceAll("\\{path\\}", getPath(article));
+		String htmlFilename = article.getPath().toString().replace(".md", ".html");
+		FileUtils.write(new File(htmlFilename), content);
+	}
+
+	public String getLinks(Article article) {
 		String links = "";
-		for (Article a : articles) 
-			links += "<li><a href=\"./" + a.getName() + ".html\">" + a.getName() + "</a></li>\n";
-		content = content.replace("{links}", links);
-		content = content.replaceAll("\\{path\\}", "./");
-		FileUtils.write(new File(baseDir + "/" + article.getName() + ".html"), content);
+		for (Article a : articles) {
+			String path = "./";
+			int c = article.getPath().getNameCount();
+			int ac = a.getPath().getNameCount();
+			for (int i = 0; i < c - ac; i++)
+				path += "../";
+			for (int i = 0; i < ac - c; i++)
+				path += a.getPath().getName(ac-2-i) + "/";
+			links += "<li><a href=\"" + path + a.getName() + ".html\">" + a.getTitle() + "</a></li>\n";
+		}
+		return links;
+	}
+
+	private String getPath(Article article) {
+		String path = "./";
+		for (int i = 1; i < article.getPath().getNameCount() - basePath.getNameCount(); i++)
+				path += "../";
+		return path;
 	}
 }
